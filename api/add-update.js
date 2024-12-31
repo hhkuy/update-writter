@@ -15,8 +15,8 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Fetch current updates.json from GitHub
-    const fileUrl = `https://api.github.com/repos/${process.env.OWNER}/${process.env.REPO}/contents/${process.env.FILE_PATH}?ref=${process.env.BRANCH}`;
+    // Fetch current updates.json from the secondary repository
+    const fileUrl = `https://api.github.com/repos/${process.env.OWNER_SECONDARY}/${process.env.REPO_SECONDARY}/contents/${process.env.FILE_PATH}?ref=${process.env.BRANCH}`;
     const fileResponse = await axios.get(fileUrl, {
       headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
     });
@@ -27,9 +27,9 @@ module.exports = async (req, res) => {
     // Add the new update
     updates.push({ date, time, message, image });
 
-    // Commit the updated updates.json back to GitHub
+    // Commit the updated updates.json back to the secondary repository
     const newContent = Buffer.from(JSON.stringify(updates, null, 2)).toString('base64');
-    await axios.put(`https://api.github.com/repos/${process.env.OWNER}/${process.env.REPO}/contents/${process.env.FILE_PATH}`, {
+    await axios.put(`https://api.github.com/repos/${process.env.OWNER_SECONDARY}/${process.env.REPO_SECONDARY}/contents/${process.env.FILE_PATH}`, {
       message: 'Add new update via backend',
       content: newContent,
       sha: fileResponse.data.sha,
