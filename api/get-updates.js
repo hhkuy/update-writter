@@ -8,7 +8,7 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const fileUrl = `https://api.github.com/repos/${process.env.OWNER}/${process.env.REPO}/contents/${process.env.FILE_PATH}?ref=${process.env.BRANCH}`;
+    const fileUrl = `https://api.github.com/repos/${process.env.OWNER_SECONDARY}/${process.env.REPO_SECONDARY}/contents/${process.env.FILE_PATH}?ref=${process.env.BRANCH}`;
     const fileResponse = await axios.get(fileUrl, {
       headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
     });
