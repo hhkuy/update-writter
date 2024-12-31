@@ -1,47 +1,59 @@
 // api/add-update.js
-const fs = require('fs');
-const path = require('path');
+
 const axios = require('axios');
 
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') {
-    res.status(405).json({ error: 'Method not allowed' });
+  // إعداد ترويسات CORS
+  res.setHeader('Access-Control-Allow-Origin', '*'); // يفضل تحديد النطاق بدلاً من '*'
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-api-key');
+
+  // التعامل مع طلبات OPTIONS
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
     return;
   }
 
+  // التأكد من أن الطريقة هي POST
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Method Not Allowed' });
+    return;
+  }
+
+  // التحقق من مفتاح الـ API
   const apiKey = req.headers['x-api-key'];
-  if (apiKey !== process.env.API_KEY) {
+  if (!apiKey || apiKey !== process.env.API_KEY) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
+  // استخراج بيانات التحديث من جسم الطلب
   const { date, time, message, image } = req.body;
-
   if (!date || !message) {
     res.status(400).json({ error: 'Date and message are required' });
     return;
   }
 
   try {
-    // قراءة الملف الحالي من GitHub باستخدام GitHub API
-    const repoOwner = process.env.OWNER_SECONDARY;
-    const repoName = process.env.REPO_SECONDARY;
-    const filePath = process.env.FILE_PATH;
-    const branch = process.env.BRANCH;
-    const githubToken = process.env.GITHUB_TOKEN;
+    const repoOwner = 'hhkuy'; // تأكد من أنه يتطابق مع المتغير البيئي إذا كنت تستخدمه
+    const repoName = 'sumsupdate'; // تأكد من أنه يتطابق مع المتغير البيئي إذا كنت تستخدمه
+    const filePath = 'updates.json'; // تأكد من أنه يتطابق مع المتغير البيئي إذا كنت تستخدمه
+    const branch = 'main'; // تأكد من أنه يتطابق مع المتغير البيئي إذا كنت تستخدمه
 
-    // جلب المحتوى الحالي للملف
+    // جلب المحتويات الحالية للملف
     const getResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}?ref=${branch}`, {
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `token ${process.env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3.raw'
       }
     });
 
     let updates = [];
     let sha = null;
+
     if (getResponse.status === 200) {
       updates = getResponse.data;
+      sha = getResponse.headers['x-github-sha'];
     }
 
     // إضافة التحديث الجديد
@@ -51,22 +63,23 @@ module.exports = async (req, res) => {
     const putResponse = await axios.put(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
       message: 'Add a new update',
       content: Buffer.from(JSON.stringify(updates, null, 2)).toString('base64'),
-      sha: getResponse.headers['x-github-sha'],
+      sha: sha,
       branch: branch
     }, {
       headers: {
-        'Authorization': `token ${githubToken}`,
+        'Authorization': `token ${process.env.GITHUB_TOKEN}`,
         'Accept': 'application/vnd.github.v3+json'
       }
     });
 
-    if (putResponse.status === 201 || putResponse.status === 200) {
+    if (putResponse.status === 200 || putResponse.status === 201) {
       res.status(200).json({ success: true });
     } else {
+      console.error("فشل في تحديث updates.json:", putResponse.data);
       res.status(500).json({ error: 'Failed to update updates.json' });
     }
   } catch (error) {
-    console.error("Error in /add-update:", error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Server error' });
+    console.error("خطأ أثناء إضافة التحديث:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Server Error' });
   }
 };
