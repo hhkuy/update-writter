@@ -1,9 +1,17 @@
 // api/add-update.js
+const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== process.env.API_KEY) {
+    res.status(401).json({ error: 'Unauthorized' });
     return;
   }
 
@@ -15,32 +23,50 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Fetch current updates.json from the secondary repository
-    const fileUrl = `https://api.github.com/repos/${process.env.OWNER_SECONDARY}/${process.env.REPO_SECONDARY}/contents/${process.env.FILE_PATH}?ref=${process.env.BRANCH}`;
-    const fileResponse = await axios.get(fileUrl, {
-      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+    // قراءة الملف الحالي من GitHub باستخدام GitHub API
+    const repoOwner = process.env.OWNER_SECONDARY;
+    const repoName = process.env.REPO_SECONDARY;
+    const filePath = process.env.FILE_PATH;
+    const branch = process.env.BRANCH;
+    const githubToken = process.env.GITHUB_TOKEN;
+
+    // جلب المحتوى الحالي للملف
+    const getResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}?ref=${branch}`, {
+      headers: {
+        'Authorization': `token ${githubToken}`,
+        'Accept': 'application/vnd.github.v3.raw'
+      }
     });
 
-    const content = Buffer.from(fileResponse.data.content, 'base64').toString('utf-8');
-    let updates = JSON.parse(content);
+    let updates = [];
+    let sha = null;
+    if (getResponse.status === 200) {
+      updates = getResponse.data;
+    }
 
-    // Add the new update
+    // إضافة التحديث الجديد
     updates.push({ date, time, message, image });
 
-    // Commit the updated updates.json back to the secondary repository
-    const newContent = Buffer.from(JSON.stringify(updates, null, 2)).toString('base64');
-    await axios.put(`https://api.github.com/repos/${process.env.OWNER_SECONDARY}/${process.env.REPO_SECONDARY}/contents/${process.env.FILE_PATH}`, {
-      message: 'Add new update via backend',
-      content: newContent,
-      sha: fileResponse.data.sha,
-      branch: process.env.BRANCH,
+    // تحديث الملف على GitHub
+    const putResponse = await axios.put(`https://api.github.com/repos/${repoOwner}/${repoName}/contents/${filePath}`, {
+      message: 'Add a new update',
+      content: Buffer.from(JSON.stringify(updates, null, 2)).toString('base64'),
+      sha: getResponse.headers['x-github-sha'],
+      branch: branch
     }, {
-      headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` },
+      headers: {
+        'Authorization': `token ${githubToken}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
     });
 
-    res.status(200).json({ success: true });
+    if (putResponse.status === 201 || putResponse.status === 200) {
+      res.status(200).json({ success: true });
+    } else {
+      res.status(500).json({ error: 'Failed to update updates.json' });
+    }
   } catch (error) {
-    console.error('Error in /add-update:', error.response ? error.response.data : error.message);
-    res.status(500).json({ error: 'Failed to add update' });
+    console.error("Error in /add-update:", error.response ? error.response.data : error.message);
+    res.status(500).json({ error: 'Server error' });
   }
 };
