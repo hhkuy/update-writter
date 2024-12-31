@@ -20,7 +20,7 @@ jobs:
 
       - name: Replace GitHub Token
         run: |
-          sed -i 's/YOUR_GITHUB_TOKEN_HERE/${{ secrets.GITHUB_TOKEN }}/g' index.html
+          sed -i 's/YOUR_GITHUB_TOKEN_HERE/${{ secrets.PERSONAL_ACCESS_TOKEN }}/g' index.html
 
       - name: Replace ImgHippo API Key
         run: |
@@ -36,5 +36,5 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           publish_dir: .
