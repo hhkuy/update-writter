@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>مولّد التحديثات (إصدار قديم بـXHR)</title>
+  <!-- إضافة Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+    }
+    .container {
+      margin-top: 50px;
+      max-width: 800px;
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #343a40;
+      font-weight: 600;
+    }
+    .update-item {
+      margin-bottom: 15px;
+    }
+    .update-item img {
+      max-width: 100%;
+      height: auto;
+    }
+    .btn-custom {
+      width: 100%;
+      padding: 12px;
+      font-size: 1.1em;
+      border-radius: 50px;
+      transition: all 0.3s ease;
+    }
+    .btn-custom:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,123,255,0.3);
+    }
+    label {
+      font-weight: 600;
+    }
+    #generated-code {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1><i class="bi bi-tools"></i> مولّد التحديثات (XHR + ES5)</h1>
+
+  <!-- الأقسام المتكررة (خانات التحديثات) -->
+  <div id="updates">
+    <div class="update-item" id="update-1">
+      <div class="mb-3">
+        <label for="date-1" class="form-label">التاريخ:</label>
+        <input type="date" class="form-control" id="date-1">
+      </div>
+      <div class="mb-3">
+        <label for="time-1" class="form-label">الوقت:</label>
+        <input type="time" class="form-control" id="time-1">
+      </div>
+      <div class="mb-3">
+        <label for="message-1" class="form-label">الرسالة:</label>
+        <textarea class="form-control" id="message-1" rows="2"></textarea>
+      </div>
+      <div class="mb-3">
+        <label for="image-1" class="form-label">رابط الصورة:</label>
+        <input type="url" class="form-control" id="image-1" placeholder="أدخل رابط الصورة">
+      </div>
+      <button class="btn btn-danger btn-custom" onclick="deleteUpdate(1)">
+        <i class="bi bi-trash"></i> حذف
+      </button>
+    </div>
+  </div>
+  <!-- نهاية الأقسام المتكررة -->
+
+  <div class="text-center mt-4">
+    <button class="btn btn-primary btn-custom mb-2" onclick="addUpdate()">
+      <i class="bi bi-plus-circle"></i> إضافة خانة
+    </button>
+    <button class="btn btn-success btn-custom mb-2" onclick="generateCode()">
+      <i class="bi bi-code-slash"></i> توليد الكود
+    </button>
+    <button class="btn btn-warning btn-custom mb-2" onclick="clearContent()">
+      <i class="bi bi-eraser"></i> مسح محتوى الخانات
+    </button>
+    <button class="btn btn-dark btn-custom mb-2" onclick="clearAllUpdates()">
+      <i class="bi bi-x-circle"></i> مسح جميع الخانات
+    </button>
+    <button class="btn btn-info btn-custom mb-2" onclick="copyCode()">
+      <i class="bi bi-clipboard"></i> نسخ الكود
+    </button>
+    <button class="btn btn-primary btn-custom mb-2" onclick="updateGitHubFile()">
+      <i class="bi bi-cloud-upload"></i> تحديث ملف GitHub
+    </button>
+  </div>
+
+  <textarea id="generated-code" class="form-control" rows="7" readonly></textarea>
+</div>
+
+<script>
+  // ------------------ إعدادات المستودع ------------------
+  // استبدل بالقيم الخاصة بك إن شئت
+  var owner = "hhkuy";
+  var repo = "sumsupdate";
+  var path = "index.html";
+  var token = "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";
+
+  // ------------------ أكواد إدارة الخانات ------------------
+  var updateCount = 1;
+
+  function addUpdate() {
+    updateCount++;
+    var updatesDiv = document.getElementById("updates");
+    var newUpdateDiv = document.createElement("div");
+    newUpdateDiv.className = "update-item";
+    newUpdateDiv.id = "update-" + updateCount;
+
+    var html = "";
+    html += '<div class="mb-3">';
+    html += '  <label for="date-' + updateCount + '" class="form-label">التاريخ:</label>';
+    html += '  <input type="date" class="form-control" id="date-' + updateCount + '">';
+    html += '</div>';
+    html += '<div class="mb-3">';
+    html += '  <label for="time-' + updateCount + '" class="form-label">الوقت:</label>';
+    html += '  <input type="time" class="form-control" id="time-' + updateCount + '">';
+    html += '</div>';
+    html += '<div class="mb-3">';
+    html += '  <label for="message-' + updateCount + '" class="form-label">الرسالة:</label>';
+    html += '  <textarea class="form-control" id="message-' + updateCount + '" rows="2"></textarea>';
+    html += '</div>';
+    html += '<div class="mb-3">';
+    html += '  <label for="image-' + updateCount + '" class="form-label">رابط الصورة:</label>';
+    html += '  <input type="url" class="form-control" id="image-' + updateCount + '" placeholder="أدخل رابط الصورة">';
+    html += '</div>';
+    html += '<button class="btn btn-danger btn-custom" onclick="deleteUpdate(' + updateCount + ')">';
+    html += '  <i class="bi bi-trash"></i> حذف';
+    html += '</button>';
+
+    newUpdateDiv.innerHTML = html;
+    updatesDiv.appendChild(newUpdateDiv);
+  }
+
+  function deleteUpdate(num) {
+    var elem = document.getElementById("update-" + num);
+    if (elem) {
+      elem.remove();
+    }
+  }
+
+  function formatTimeTo12Hour(time) {
+    var parts = time.split(":");
+    var hours = parseInt(parts[0], 10);
+    var minutes = parts[1];
+    var period = (hours >= 12) ? "م" : "ص";
+    var formattedHours = (hours % 12) || 12;
+    return formattedHours + ":" + minutes + " " + period;
+  }
+
+  function generateCode() {
+    var generatedCode = "";
+    var updatesDiv = document.getElementById("updates");
+    var updateItems = Array.prototype.slice.call(updatesDiv.querySelectorAll(".update-item")).reverse();
+
+    for (var i = 0; i < updateItems.length; i++) {
+      var update = updateItems[i];
+      var id = update.id.split("-")[1];
+
+      var dateElement = document.getElementById("date-" + id);
+      var timeElement = document.getElementById("time-" + id);
+      var messageElement = document.getElementById("message-" + id);
+      var imageElement = document.getElementById("image-" + id);
+
+      if (dateElement && timeElement && messageElement && imageElement) {
+        var dateValue = dateElement.value;
+        var timeValue = timeElement.value ? formatTimeTo12Hour(timeElement.value) : "";
+        var message = messageElement.value.trim();
+        var image = imageElement.value.trim();
+
+        if (dateValue && message) {
+          generatedCode += '<div class="update-item">\n';
+          generatedCode += '  <div class="update-date">\n';
+          generatedCode += '    <i class="bi bi-calendar-check"></i> ' + dateValue;
+          if (timeValue) {
+            generatedCode += ', ' + timeValue;
+          }
+          generatedCode += '\n  </div>\n';
+          generatedCode += '  <div class="update-content">' + message + '</div>\n';
+          if (image) {
+            generatedCode += '  <br><img src="' + image + '" alt="Update Image" style="max-width: 100%; height: auto;">\n';
+          }
+          generatedCode += '</div>\n\n';
+        }
+      }
+    }
+    document.getElementById("generated-code").value = generatedCode;
+  }
+
+  function clearContent() {
+    var updatesDiv = document.getElementById("updates");
+    var inputs = updatesDiv.querySelectorAll("input, textarea");
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].value = "";
+    }
+  }
+
+  function clearAllUpdates() {
+    document.getElementById("updates").innerHTML = "";
+    updateCount = 0;
+    addUpdate();
+    document.getElementById("generated-code").value = "";
+  }
+
+  function copyCode() {
+    var generatedCode = document.getElementById("generated-code");
+    if (generatedCode.value) {
+      generatedCode.select();
+      document.execCommand("copy");
+      alert("تم نسخ الكود إلى الحافظة!");
+    } else {
+      alert("لا يوجد كود لنسخه.");
+    }
+  }
+
+  // ------------------ التحديث المباشر لملف GitHub عبر XHR ------------------
+  // سنستخدم XMLHttpRequest (بدل fetch و async/await)
+  function updateGitHubFile() {
+    // 1) طلب GET لجلب sha الخاص بالملف
+    var getFileUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + path;
+    var xhrGet = new XMLHttpRequest();
+
+    xhrGet.onreadystatechange = function() {
+      if (xhrGet.readyState === 4) {
+        if (xhrGet.status === 200) {
+          try {
+            // نجلب sha
+            var fileData = JSON.parse(xhrGet.responseText);
+            var sha = fileData.sha;
+            // الآن نرسل طلب PUT بالتحديث
+            doPutUpdate(sha);
+          } catch(e) {
+            alert("تعذر قراءة بيانات الملف من GitHub.");
+            console.error(e);
+          }
+        } else {
+          alert("حدث خطأ عند جلب الملف من GitHub. كود الحالة: " + xhrGet.status);
+        }
+      }
+    };
+
+    xhrGet.open("GET", getFileUrl, true);
+    xhrGet.setRequestHeader("Authorization", "token " + token);
+    xhrGet.send();
+  }
+
+  function doPutUpdate(sha) {
+    var generatedCode = document.getElementById("generated-code").value;
+    // نبني المحتوى الجديد (HTML كامل)
+    var newContent = "<!DOCTYPE html>"
+      + "<html lang=\"ar\" dir=\"rtl\">"
+      + "<head>"
+      + "<meta charset=\"UTF-8\">"
+      + "<title>آخر التحديثات</title>"
+      + "<link href=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css\" rel=\"stylesheet\" crossorigin=\"anonymous\">"
+      + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css\">"
+      + "<link href=\"https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap\" rel=\"stylesheet\">"
+      + "<style>"
+      + "body {background: linear-gradient(135deg, #f5f7fa, #c3cfe2);font-family: 'Cairo', sans-serif;direction: rtl;}"
+      + ".container {margin-top: 50px;max-width: 600px;background-color: #fff;padding: 30px;border-radius: 15px;box-shadow: 0 10px 30px rgba(0,0,0,0.1);}"
+      + "h2 {text-align: center;color: #343a40;font-weight: 600;}"
+      + ".update-item {padding: 20px;border-bottom: 1px solid #ddd;}"
+      + ".update-item:last-child {border-bottom: none;}"
+      + ".update-date {font-weight: bold;color: #007bff;font-size: 1.1em;}"
+      + ".update-content {margin-top: 10px;color: #555;}"
+      + "</style>"
+      + "</head>"
+      + "<body>"
+      + "<div class=\"container\">"
+      + "<h2><i class=\"bi bi-clock-history\"></i> آخر التحديثات</h2>"
+      + generatedCode
+      + "</div>"
+      + "<script src=\"https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js\" crossorigin=\"anonymous\"></script>"
+      + "</body>"
+      + "</html>";
+
+    // تحويل النص إلى Base64
+    var base64Content = btoa(unescape(encodeURIComponent(newContent)));
+
+    // 2) طلب PUT لتحديث الملف
+    var putUrl = "https://api.github.com/repos/" + owner + "/" + repo + "/contents/" + path;
+    var xhrPut = new XMLHttpRequest();
+
+    xhrPut.onreadystatechange = function() {
+      if (xhrPut.readyState === 4) {
+        if (xhrPut.status === 200 || xhrPut.status === 201) {
+          alert("تم تحديث الملف على GitHub بنجاح!");
+        } else {
+          alert("فشل التحديث. تحقق من وحدة التحكم (Console). كود الحالة: " + xhrPut.status);
+          console.error(xhrPut.responseText);
+        }
+      }
+    };
+
+    xhrPut.open("PUT", putUrl, true);
+    xhrPut.setRequestHeader("Authorization", "token " + token);
+    xhrPut.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+
+    var bodyObj = {
+      message: "Automatic update via code generator (XMLHttpRequest)",
+      content: base64Content,
+      sha: sha
+    };
+    xhrPut.send(JSON.stringify(bodyObj));
+  }
+</script>
+
+</body>
+</html>
