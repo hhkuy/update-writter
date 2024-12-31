@@ -272,23 +272,12 @@
 
 <script>
 /*
-  إعدادات المستودع على GitHub
-  - المالك (owner) = "hhkuy"  (غيِّره عند الحاجة)
-  - المستودع (repo) = "sumsupdate"  (غيِّره عند الحاجة)
-  - الملف (filePath) = "updates.json"
-  - الفرع (branch) = "main"
-
-  توكن GitHub (Personal Access Token) - استبدله بقيمتك الخاصة.
-  **مهم:** لا تقم بتضمين رموز الوصول في الكود الأمامي. استخدم الوظائف الخلفية (Serverless Functions) للتعامل مع API.
+  إعدادات التواصل مع الوظائف الخلفية على Vercel
+  - BACKEND_URL: رابط تطبيقك على Vercel
+  - API_KEY: مفتاح API للتحقق من الطلبات
 */
-var owner = "hhkuy";
-var repo = "sumsupdate";
-var filePath = "updates.json";
-var branch = "main";
-// var token = "07730773khk123"; // **مهم: لا تضف رمز الوصول في الكود الأمامي**
-
 const BACKEND_URL = 'https://update-writter.vercel.app'; // استبدل بـ رابط تطبيقك على Vercel
-const API_KEY = '07730773khk123'; // **مهم: لا تضع مفاتيح API مباشرة في الكود الأمامي في المشاريع الحقيقية**
+const API_KEY = '07730773khk123'; // **مهم: تأكد من حماية هذا المفتاح وعدم عرضه للعامة**
 
 /**
  * مصفوفة التحديثات + آخر sha
@@ -301,15 +290,14 @@ var currentEditIndex = -1;   // فهرس العنصر المراد تعديله
 var currentDeleteIndex = -1; // فهرس العنصر المراد حذفه (حذف فردي)
 
 /**
- * دالة مساعدة لرفع صورة إلى imghippo بواسطة XHR لعرض تقدّم الرفع
- * يتم إرسال api_key و file كمعاملات في FormData
+ * دالة مساعدة لرفع صورة إلى الوظيفة الخلفية لرفع الصور
  *
  * @param {File} file - ملف الصورة المختار
  * @param {HTMLElement} progressBarContainer - العنصر الذي يحتوي على progress-bar (لإظهاره أو إخفائه)
  * @param {HTMLElement} progressBar - عنصر الـ progress-bar نفسه
  * @returns رابط الصورة المباشر (data.url) أو سلسلة فارغة في حال الفشل
  */
-function uploadImageToImgHippo(file, progressBarContainer, progressBar) {
+function uploadImage(file, progressBarContainer, progressBar) {
   return new Promise((resolve) => {
     if (!file) {
       return resolve(""); // لا يوجد ملف
@@ -324,146 +312,123 @@ function uploadImageToImgHippo(file, progressBarContainer, progressBar) {
       progressBar.textContent = "0%";
     }
 
-    let formData = new FormData();
-    formData.append("api_key", "076dd2c00a3cf16634d6029f1b25b16c"); // **مهم: لا تضف مفتاح API مباشرة في الكود الأمامي**
-    formData.append("file", file);
-    // يمكنك إضافة "title" إذا رغبت في ذلك
-    // formData.append("title", "عنوان الصورة");
+    let reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async () => {
+      try {
+        const base64Image = reader.result.split(',')[1];
+        const response = await fetch(`${BACKEND_URL}/api/upload-image`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_KEY
+          },
+          body: JSON.stringify({ image: base64Image }),
+        });
 
-    let xhr = new XMLHttpRequest();
-    xhr.open("POST", "https://api.imghippo.com/v1/upload", true);
-
-    // تعيين ترويسات الطلب حسب متطلبات API
-    xhr.setRequestHeader("Accept", "application/json");
-    // لا حاجة لإضافة Authorization header لأننا نرسل api_key كمعامل
-
-    // متابعة تقدم الرفع
-    xhr.upload.onprogress = function(event) {
-      if (event.lengthComputable) {
-        const percentComplete = Math.floor((event.loaded / event.total) * 100);
-        if (progressBar) {
-          progressBar.style.width = percentComplete + "%";
-          progressBar.setAttribute("aria-valuenow", percentComplete);
-          progressBar.textContent = percentComplete + "%";
-        }
-      }
-    };
-
-    // عند انتهاء الرفع
-    xhr.onload = function() {
-      if (xhr.status === 200) {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          if (response.success && response.data && response.data.url) {
-            if (progressBar) {
-              progressBar.style.width = "100%";
-              progressBar.textContent = "تم رفع الصورة";
-            }
-            return resolve(response.data.url);
-          } else {
-            console.error("فشل رفع الصورة:", response);
-            if (progressBar) {
-              progressBar.textContent = "فشل الرفع";
-            }
-            return resolve("");
+        const data = await response.json();
+        if (data.url) {
+          if (progressBar) {
+            progressBar.style.width = "100%";
+            progressBar.textContent = "تم رفع الصورة";
           }
-        } catch (error) {
-          console.error("خطأ في تحليل الاستجابة:", error);
+          resolve(data.url);
+        } else {
+          alert('فشل في رفع الصورة.');
           if (progressBar) {
             progressBar.textContent = "فشل الرفع";
           }
-          return resolve("");
+          resolve("");
         }
-      } else {
-        console.error("فشل الرفع. حالة الطلب:", xhr.status);
+      } catch (error) {
+        console.error(error);
+        alert('حدث خطأ أثناء رفع الصورة.');
         if (progressBar) {
           progressBar.textContent = "فشل الرفع";
         }
-        return resolve("");
+        resolve("");
       }
     };
-
-    // التعامل مع أخطاء الاتصال
-    xhr.onerror = function() {
-      console.error("حدث خطأ أثناء الاتصال.");
+    reader.onerror = () => {
+      console.error("خطأ في قراءة الملف.");
+      alert('حدث خطأ أثناء قراءة الملف.');
       if (progressBar) {
         progressBar.textContent = "فشل الرفع";
       }
-      return resolve("");
+      resolve("");
     };
-
-    // إرسال الطلب
-    xhr.send(formData);
   });
 }
 
 /**
- * جلب الملف updates.json من GitHub وتخزين محتواه في updatesArray
+ * جلب التحديثات من الوظيفة الخلفية
  */
 async function fetchJsonFile() {
   try {
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}?ref=${branch}`;
-    const response = await fetch(url, {
-      headers: { Authorization: "token " + token }
+    const response = await fetch(`${BACKEND_URL}/api/get-updates`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': API_KEY
+      }
     });
-    if (!response.ok) {
-      console.warn("فشل في جلب الملف: updates.json. ربما غير موجود أو هناك خطأ.");
-      updatesArray = [];
-      lastSha = null;
-      return;
-    }
+
     const data = await response.json();
-    lastSha = data.sha;  // sha
-    const decodedContent = atob(data.content);
-    const jsonContent = decodeURIComponent(escape(decodedContent)); // إصلاح الأحرف العربية
-    updatesArray = JSON.parse(jsonContent);
+    if (data.updates) {
+      updatesArray = data.updates;
+    } else {
+      updatesArray = [];
+    }
   } catch (error) {
-    console.error("خطأ أثناء جلب الملف:", error);
+    console.error("خطأ أثناء جلب التحديثات:", error);
     updatesArray = [];
-    lastSha = null;
   }
 }
 
 /**
- * رفع المصفوفة updatesArray إلى GitHub (PUT)
+ * حفظ التحديثات عبر الوظيفة الخلفية
+ *
+ * @param {Object} updateData - بيانات التحديث
  */
-async function saveJsonFile(message) {
-  if (lastSha === null) {
-    alert("لا يمكن الحفظ. لم يتم جلب الملف أو sha!");
-    return;
-  }
+async function saveUpdate(updateData) {
   try {
-    const newContent = JSON.stringify(updatesArray, null, 2);
-    const base64Content = btoa(unescape(encodeURIComponent(newContent)));
-
-    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`;
-    const bodyObj = {
-      message: message || "Update via code generator",
-      content: base64Content,
-      sha: lastSha,
-      branch: branch
-    };
-
-    const response = await fetch(url, {
-      method: "PUT",
+    const response = await fetch(`${BACKEND_URL}/api/add-update`, {
+      method: 'POST',
       headers: {
-        Authorization: "token " + token,
-        "Content-Type": "application/json"
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY
       },
-      body: JSON.stringify(bodyObj)
+      body: JSON.stringify(updateData),
     });
 
-    if (!response.ok) {
-      let txt = await response.text();
-      console.error("فشل حفظ الملف على GitHub:", txt);
-      alert("فشل الحفظ. راجع Console.");
-      return;
-    }
-
-    const resData = await response.json();
-    lastSha = resData.content.sha; // sha جديدة
+    const data = await response.json();
+    return data.success;
   } catch (error) {
-    console.error("خطأ أثناء حفظ الملف:", error);
+    console.error("خطأ أثناء حفظ التحديث:", error);
+    return false;
+  }
+}
+
+/**
+ * حذف تحديث عبر الوظيفة الخلفية
+ *
+ * @param {number} index - فهرس التحديث للحذف
+ */
+async function deleteUpdate(index) {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/delete-update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': API_KEY
+      },
+      body: JSON.stringify({ index }),
+    });
+
+    const data = await response.json();
+    return data.success;
+  } catch (error) {
+    console.error("خطأ أثناء حذف التحديث:", error);
+    return false;
   }
 }
 
@@ -581,12 +546,9 @@ function deleteAllAddedRows() {
 }
 
 /**
- * قراءة كل الصفوف المضافة وحفظها في المصفوفة ثم رفعها إلى GitHub
+ * قراءة كل الصفوف المضافة وحفظها في المصفوفة ثم رفعها إلى GitHub عبر الوظائف الخلفية
  */
 async function saveMultipleUpdates() {
-  // 1) جلب الملف الأحدث
-  await fetchJsonFile();
-
   const container = document.getElementById("multi-updates-container");
   let rowDivs = container.getElementsByClassName("row-group");
   let newCount = 0;
@@ -624,13 +586,15 @@ async function saveMultipleUpdates() {
     // إن كان هناك صورة مختارة، نرفعها
     if (imageInput.files && imageInput.files.length > 0) {
       let imageFile = imageInput.files[0];
-      let uploadedURL = await uploadImageToImgHippo(imageFile, progressContainer, progressBar);
+      let uploadedURL = await uploadImage(imageFile, progressContainer, progressBar);
       newUpdate.image = uploadedURL;
     }
 
-    // إدخال التحديث في المصفوفة
-    updatesArray.push(newUpdate);
-    newCount++;
+    // إدخال التحديث في المصفوفة عبر الوظيفة الخلفية
+    const success = await saveUpdate(newUpdate);
+    if (success) {
+      newCount++;
+    }
   }
 
   if (newCount === 0) {
@@ -638,16 +602,16 @@ async function saveMultipleUpdates() {
     return;
   }
 
-  await saveJsonFile("Add multiple updates");
   alert("تمت إضافة " + newCount + " تحديث(ات) بنجاح!");
 
   // تفريغ الصفوف بعد الحفظ
-  container.innerHTML = "";
+  document.getElementById("multi-updates-container").innerHTML = "";
+  showAllUpdates();
 }
 
 /**
  * عرض محتوى JSON الحالي في الـ textarea + عرض جدول بالتحديثات
- * تم تعديل هذه الدالة لعكس ترتيب التحديثات بحيث يظهر آخر تحديث أولاً
+ * تم تعديل هذه الدالة لعرض التحديثات المسترجعة من الوظيفة الخلفية
  */
 async function showAllUpdates() {
   await fetchJsonFile();
@@ -774,9 +738,6 @@ function openEditModal(index) {
  * حفظ التعديلات بعد إغلاق الـ Modal
  */
 async function saveEditChanges() {
-  // جلب آخر نسخة من الملف
-  await fetchJsonFile();
-
   if (currentEditIndex < 0 || currentEditIndex >= updatesArray.length) {
     alert("فهرس غير صالح للتعديل");
     return;
@@ -793,25 +754,29 @@ async function saveEditChanges() {
   let editProgressBar = editProgressContainer.querySelector(".progress-bar");
 
   // تعيين القيم الجديدة
-  item.date = newDate;
-  item.time = formatTo12Hour(newTime);
-  item.message = newMessage;
+  let updatedData = {
+    date: newDate,
+    time: formatTo12Hour(newTime),
+    message: newMessage,
+    image: item.image // سيُحدد لاحقًا إن وجد ملف
+  };
 
   // إن كان هناك صورة جديدة
   if (fileInput.files && fileInput.files.length > 0) {
     let imageFile = fileInput.files[0];
-    let uploadedURL = await uploadImageToImgHippo(imageFile, editProgressContainer, editProgressBar);
-    if (uploadedURL) {
-      item.image = uploadedURL; // تحديث الرابط
-    }
+    let uploadedURL = await uploadImage(imageFile, editProgressContainer, editProgressBar);
+    updatedData.image = uploadedURL || item.image; // تحديث الرابط إن تم الرفع بنجاح
   }
 
-  // حفظ التعديلات
-  await saveJsonFile("Edit one update");
-  alert("تم تعديل التحديث بنجاح.");
-
-  // إعادة عرض التحديثات
-  showAllUpdates();
+  // حفظ التعديلات عبر الوظيفة الخلفية
+  const success = await saveUpdate(updatedData);
+  if (success) {
+    alert("تم تعديل التحديث بنجاح.");
+    await fetchJsonFile();
+    showAllUpdates();
+  } else {
+    alert("فشل في تعديل التحديث.");
+  }
 
   // إغلاق الـ Modal
   let modalEl = document.getElementById("editModal");
@@ -832,18 +797,18 @@ function openConfirmDeleteModal(index) {
  * تأكيد حذف تحديث واحد
  */
 async function confirmDeleteOneUpdate() {
-  // جلب آخر نسخة
-  await fetchJsonFile();
-
   if (currentDeleteIndex < 0 || currentDeleteIndex >= updatesArray.length) {
     alert("فهرس غير صالح");
     return;
   }
-  updatesArray.splice(currentDeleteIndex, 1);
-  await saveJsonFile("Delete one update");
-  alert("تم حذف التحديث.");
-
-  showAllUpdates();
+  const success = await deleteUpdate(currentDeleteIndex);
+  if (success) {
+    alert("تم حذف التحديث.");
+    await fetchJsonFile();
+    showAllUpdates();
+  } else {
+    alert("فشل في حذف التحديث.");
+  }
 
   // إغلاق الـ Modal
   let modalEl = document.getElementById("confirmDeleteModal");
@@ -863,13 +828,20 @@ function openConfirmDeleteAllModal() {
  * تأكيد حذف جميع التحديثات
  */
 async function confirmDeleteAllUpdates() {
-  await fetchJsonFile();
-  updatesArray = []; // إفراغ
-  await saveJsonFile("Delete all updates");
-  alert("تم حذف جميع التحديثات.");
+  // يمكنك إنشاء وظيفة خلفية لحذف جميع التحديثات إذا لزم الأمر
+  // هنا سنقوم بإفراغ المصفوفة محليًا ثم حفظها
+  updatesArray = [];
+  const success = await saveUpdate({
+    updates: updatesArray
+  });
 
-  document.getElementById("json-content").value = "";
-  document.getElementById("updates-table").style.display = "none";
+  if (success) {
+    alert("تم حذف جميع التحديثات.");
+    document.getElementById("json-content").value = "";
+    document.getElementById("updates-table").style.display = "none";
+  } else {
+    alert("فشل في حذف جميع التحديثات.");
+  }
 
   // إغلاق الـ Modal
   let modalEl = document.getElementById("confirmDeleteAllModal");
